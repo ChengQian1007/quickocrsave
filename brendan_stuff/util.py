@@ -1,6 +1,15 @@
 from PIL import Image
 from subprocess import call
-from xgoogle.search import GoogleSearch, SearchError
+from urllib import urlencode
+from collections import Counter
+import json
+import requests
+import os
+import random
+import time
+import re
+
+PROXY_LIST=['http://proxy-ip-list.com/download/proxy-list-port-3128.txt']
 def image_to_text(in_img):
     """
     Accepts an image file and runs it through tesseract.
@@ -8,13 +17,19 @@ def image_to_text(in_img):
     :return: string of raw text sample.
     """
     in_img.save('input.png')
-    call(["tesseract",'input.png','output'])
-    foutput = open('output.txt','r')
+    call(["tesseract", 'input.png', 'output'])
+
+    foutput = open('output.txt', 'r')
     text = foutput.read()
     foutput.close()
+    os.remove('output.txt')
+    os.remove('input.png')
+
     return text
+
+
 def check_all_words(input_text):
-    fdict = open('dictionary.txt','r')
+    fdict = open('dictionary.txt', 'r')
     dictionary = fdict.read().split()
     result = []
     for word in input_text.split():
@@ -22,59 +37,79 @@ def check_all_words(input_text):
             result.append(word)
     return result
 
+
 def convert_clean(in_img):
     text = image_to_text(in_img)
     return ' '.join(check_all_words(text))
 
 
-def search_text(text):
-    print "search for: "+text
-    result_url = ""
-    try:
-      import ipdb;ipdb.set_trace()
-      gs = GoogleSearch(text)
-      gs.results_per_page = 50
-      results = gs.get_results()
-      res_urls = []
-      for res in results:
-        # print res.title.encode("utf8")
-        # print res.desc.encode("utf8")
-        print res.url.encode("utf8")
+def get_result_json(text):
+    # import ipdb;ipdb.set_trace()
+    proxy_list = requests.get(PROXY_LIST[0]).text
+    response_code = 200
+    link = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&"+urlencode({'q': text})
+    response = requests.get(link)
+    response_text, response_code = response.text, response.status_code
+    if json.loads(response_text)["responseStatus"] not in range(400, 500):
+        response_text = response_text.replace('\u003c/b\u003e', '').replace('\u003cb\u003e', '')
+        return response_text
 
-        res_urls.append(res.url.encode("utf8"))
-      try:
-          result = res_urls[0]
-      except:
-          result = ''
-      return result
-    except SearchError, e:
-        print "Search failed: %s" % e
-        return ""
+    for row in proxy_list.split('\r'):
+        ip_search = re.search('^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\:3128', row)
+        if ip_search:
+            ip = ip_search.group(0)
+            if ip:
+                try:
+
+                    proxyDict = {"http": ip}
+
+                    response = requests.get(link, proxies=proxyDict)
+                    response_text, response_code = response.text, response.status_code
+                    if "<html>" not in response_text:
+                        response_text = response_text.replace('\u003c/b\u003e', '').replace('\u003cb\u003e', '')
+                        return response_text
+                except Exception:
+                    print "failed on", row, "\n continuing..."
+
+
+    if response_code in range(400, 500):
+        raise Exception('BUSTED: Google caught you.')
 
 def determine_link(full_text):
-    # import ipdb; ipdb.set_trace()
     text_arr = full_text.split()
     cur_query = ""
-    from collections import Counter
-    url_counts = Counter()
     count = 0
+    final_dict = Counter()
+    chunk_size = 20
+    num_chunks = 10
     for text in text_arr:
-        count+=1
-        cur_query+=text+" "
-        if count % 20 == 0:
-            url_counts[search_text(cur_query)]+=1
+        count += 1
+        cur_query += text+" "
+        if count % chunk_size == 0 and count < chunk_size*num_chunks:
+            time.sleep(random.randint(0,5))
+            results_json = json.loads(get_result_json(cur_query))
+            print results_json
+
+            if results_json["responseStatus"] in range(400, 500):
+                raise Exception('BUSTED: Google caught you.')
+
+            cur = results_json["responseData"]["results"]
+            for x in range(len(cur)):
+                cur_key = cur[x]['url'], cur[x]["title"]
+                final_dict[cur_key] += 1
             cur_query = ""
 
-    return url_counts.most_common()
-
-
+    return final_dict.most_common()
 
 
 def example():
-    text = convert_clean(Image.open('test2.jpg'))
-    url = determine_link(text)
-    print "FINAL:"+str(url)
-    cleaned = open('cleaned_output.txt','w')
+    text = convert_clean(Image.open('../test_data/test2.jpg'))
+    urls = determine_link(text)
+    for row in urls:
+        print row
+    cleaned = open('cleaned_output.txt', 'w')
     cleaned.write(text)
     cleaned.close()
+    os.remove('cleaned_output.txt')
 
+example()

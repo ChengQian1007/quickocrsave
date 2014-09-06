@@ -1,4 +1,0 @@
-pytesseract
-Pillow
-PyEnchant
-flask
