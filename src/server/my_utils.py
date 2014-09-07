@@ -54,22 +54,24 @@ def get_result_json(text):
         response_text = response_text.replace('\u003c/b\u003e', '').replace('\u003cb\u003e', '')
         return response_text
     print "Forbidden by Google on this IP.  Switching to next proxy."
+    proxies = []
     for row in proxy_list.split('\r'):
         ip_search = re.search('^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\:3128', row)
         if ip_search:
             ip = ip_search.group(0)
             if ip:
-                try:
+                proxies.append(ip)
+        try:
 
-                    proxyDict = {"http": ip}
+            proxyDict = {"http": ip}
 
-                    response = requests.get(link, proxies=proxyDict)
-                    response_text, response_code = response.text, response.status_code
-                    if "<html>" not in response_text:
-                        response_text = response_text.replace('\u003c/b\u003e', '').replace('\u003cb\u003e', '')
-                        return response_text
-                except Exception:
-                    print "failed on", row, "\n continuing..."
+            response = requests.get(link, proxies=proxyDict)
+            response_text, response_code = response.text, response.status_code
+            if "<html>" not in response_text:
+                response_text = response_text.replace('\u003c/b\u003e', '').replace('\u003cb\u003e', '')
+                return response_text
+        except Exception:
+            print "failed on", row, "\n continuing..."
 
 
     if response_code in range(400, 500):
