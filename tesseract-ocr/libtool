@@ -2,7 +2,7 @@
 
 # libtool - Provide generalized library-building support services.
 # Generated automatically by config.status (tesseract) 3.02.02
-# Libtool was configured on host moriarty:
+# Libtool was configured on host 0587359189.wireless.umich.net:
 # NOTE: Changes made to this file will be lost: look at ltmain.sh.
 #
 #   Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2003, 2004, 2005,
@@ -1277,7 +1277,7 @@ exec_cmd=
 # Append VALUE to the end of shell variable VAR.
 func_append ()
 {
-    eval "${1}+=\${2}"
+eval "${1}+=\${2}"
 } # Extended-shell func_append implementation
 
 # func_append_quoted var value
@@ -1293,7 +1293,7 @@ func_append_quoted ()
 # func_arith arithmetic-term...
 func_arith ()
 {
-    func_arith_result=$(( $* ))
+func_arith_result=$(( $* ))
 } # Extended-shell func_arith implementation
 
 
@@ -1301,7 +1301,7 @@ func_arith ()
 # STRING may not start with a hyphen.
 func_len ()
 {
-    func_len_result=${#1}
+func_len_result=${#1}
 } # Extended-shell func_len implementation
 
 
@@ -1318,7 +1318,7 @@ func_lo2o ()
 # func_xform libobj-or-source
 func_xform ()
 {
-    func_xform_result=${1%.*}.lo
+func_xform_result=${1%.*}.lo
 } # Extended-shell func_xform implementation
 
 
